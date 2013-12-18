@@ -49,15 +49,6 @@ struct boot_img_hdr
     unsigned id[8]; /* timestamp / checksum / sha1 / etc */
 };
 
-struct loki_hdr {
-    unsigned char magic[4];     /* 0x494b4f4c */
-    unsigned int recovery;      /* 0 = boot.img, 1 = recovery.img */
-    char build[128];   /* Build number */
-
-    unsigned int orig_kernel_size;
-    unsigned int orig_ramdisk_size;
-    unsigned int ramdisk_addr;
-};
 
 /*
 ** +-----------------+ 
