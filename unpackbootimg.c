@@ -3,6 +3,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include <limits.h>
 #include <libgen.h>
@@ -46,12 +48,16 @@ int usage() {
     return 0;
 }
 
+
 int main(int argc, char** argv)
 {
+    int ifd, ofd, aboot_fd, pos, i, recovery, offset, fake_size;
     char tmp[PATH_MAX];
     char* directory = "./";
     char* filename = NULL;
     int pagesize = 0;
+    struct stat st;
+    void *orig, *aboot, *ptr;
 
     argc--;
     argv++;
@@ -79,6 +85,23 @@ int main(int argc, char** argv)
     int total_read = 0;
     FILE* f = fopen(filename, "rb");
     boot_img_hdr header;
+    struct loki_hdr *loki_hdr;
+    struct boot_img_hdr *hdr;
+
+        /* Map the original boot/recovery image */
+        if (fstat(ifd, &st)) {
+                printf("[-] fstat() failed.\n");
+                return 1;
+        }
+
+        orig = mmap(0, (st.st_size + 0x2000 + 0xfff) & ~0xfff, PROT_READ|PROT_WRITE, MAP_PRIVATE, ifd, 0);
+        if (orig == MAP_FAILED) {
+                printf("[-] Failed to mmap input file.\n");
+                return 1;
+        }
+
+        hdr = orig;
+        loki_hdr = orig + 0x400;
 
     //printf("Reading header...\n");
     fread(&header, sizeof(header), 1, f);
