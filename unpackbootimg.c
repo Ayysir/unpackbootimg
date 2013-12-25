@@ -3,15 +3,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
 #include <errno.h>
 #include <limits.h>
 #include <libgen.h>
 
 #include "mincrypt/sha.h"
 #include "bootimg.h"
-#include "loki.h"
 
 typedef unsigned char byte;
 
@@ -49,20 +46,15 @@ int usage() {
     return 0;
 }
 
-
 int main(int argc, char** argv)
 {
-    int ifd;
     char tmp[PATH_MAX];
     char* directory = "./";
     char* filename = NULL;
     int pagesize = 0;
-    struct stat st;
-    void *orig;
 
     argc--;
     argv++;
-   
     while(argc > 0){
         char *arg = argv[0];
         char *val = argv[1];
@@ -86,20 +78,23 @@ int main(int argc, char** argv)
     int total_read = 0;
     FILE* f = fopen(filename, "rb");
     boot_img_hdr header;
-    struct boot_hdr *hdr;
-    struct loki_hdr *loki_hdr;
-
-        orig = mmap(0, (st.st_size + 0x2000 + 0xfff) & ~0xfff, PROT_READ|PROT_WRITE, MAP_PRIVATE, ifd, 0);
-        if (orig == MAP_FAILED) {
-                printf("[-] Failed to mmap input file.\n");
-                return 1;
-        }
-
-        hdr = orig;
-        loki_hdr = orig + 0x400;
-
 
     //printf("Reading header...\n");
+    int i;
+    for (i = 0; i <= 512; i++) {
+        fseek(f, i, SEEK_SET);
+        fread(tmp, BOOT_MAGIC_SIZE, 1, f);
+        if (memcmp(tmp, BOOT_MAGIC, BOOT_MAGIC_SIZE) == 0)
+            break;
+    }
+    total_read = i;
+    if (i > 512) {
+        printf("Android boot magic not found.\n");
+        return 1;
+    }
+    fseek(f, i, SEEK_SET);
+    printf("Android magic found at: %d\n", i);
+
     fread(&header, sizeof(header), 1, f);
     printf("BOARD_KERNEL_CMDLINE %s\n", header.cmdline);
     printf("BOARD_KERNEL_BASE %08x\n", header.kernel_addr - 0x00008000);
