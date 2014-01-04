@@ -55,6 +55,7 @@ int main(int argc, char** argv)
 
     argc--;
     argv++;
+   
     while(argc > 0){
         char *arg = argv[0];
         char *val = argv[1];
@@ -78,30 +79,23 @@ int main(int argc, char** argv)
     int total_read = 0;
     FILE* f = fopen(filename, "rb");
     boot_img_hdr header;
+    loki_hdr lheader;
 
     //printf("Reading header...\n");
-    int i;
-    for (i = 0; i <= 512; i++) {
-        fseek(f, i, SEEK_SET);
-        fread(tmp, BOOT_MAGIC_SIZE, 1, f);
-        if (memcmp(tmp, BOOT_MAGIC, BOOT_MAGIC_SIZE) == 0)
-            break;
-    }
-    total_read = i;
-    if (i > 512) {
-        printf("Android boot magic not found.\n");
-        return 1;
-    }
-    fseek(f, i, SEEK_SET);
-    printf("Android magic found at: %d\n", i);
-
     fread(&header, sizeof(header), 1, f);
+    fseek(f, 0x400, SEEK_SET);
+    fread(&lheader, sizeof(lheader), 1, f);
     printf("BOARD_KERNEL_CMDLINE %s\n", header.cmdline);
     printf("BOARD_KERNEL_BASE %08x\n", header.kernel_addr - 0x00008000);
     printf("BOARD_PAGE_SIZE %d\n", header.page_size);
     
     if (pagesize == 0) {
         pagesize = header.page_size;
+    }
+
+    if (lheader.magic =="LOKI") {
+        header.kernel_size = lheader.orig_kernel_size;
+        header.ramdisk_size = lheader.orig_ramdisk_size;
     }
     
     //printf("cmdline...\n");
@@ -143,6 +137,7 @@ int main(int argc, char** argv)
     sprintf(tmp, "%s/%s", directory, basename(filename));
     strcat(tmp, "-ramdisk.gz");
     FILE *r = fopen(tmp, "wb");
+
     byte* ramdisk = (byte*)malloc(header.ramdisk_size);
     //printf("Reading ramdisk...\n");
     fread(ramdisk, header.ramdisk_size, 1, f);

@@ -19,6 +19,7 @@
 #define _BOOT_IMAGE_H_
 
 typedef struct boot_img_hdr boot_img_hdr;
+typedef struct loki_hdr loki_hdr;
 
 #define BOOT_MAGIC "ANDROID!"
 #define BOOT_MAGIC_SIZE 8
@@ -40,8 +41,8 @@ struct boot_img_hdr
 
     unsigned tags_addr;    /* physical addr for kernel tags */
     unsigned page_size;    /* flash page size we assume */
-    unsigned dt_size;      /* device tree in bytes */
-    unsigned unused;       /* future expansion: should be 0 */
+    unsigned unused[2];    /* future expansion: should be 0 */
+
     unsigned char name[BOOT_NAME_SIZE]; /* asciiz product name */
     
     unsigned char cmdline[BOOT_ARGS_SIZE];
@@ -59,13 +60,10 @@ struct boot_img_hdr
 ** +-----------------+
 ** | second stage    | o pages
 ** +-----------------+
-** | device tree     | p pages
-** +-----------------+
 **
 ** n = (kernel_size + page_size - 1) / page_size
 ** m = (ramdisk_size + page_size - 1) / page_size
 ** o = (second_size + page_size - 1) / page_size
-** p = (dt_size + page_size - 1) / page_size
 **
 ** 0. all entities are page_size aligned in flash
 ** 1. kernel and ramdisk are required (size != 0)
@@ -78,6 +76,16 @@ struct boot_img_hdr
 ** 6. if second_size != 0: jump to second_addr
 **    else: jump to kernel_addr
 */
+
+struct loki_hdr {
+    unsigned char magic[4];     /* 0x494b4f4c */
+    unsigned int recovery;      /* 0 = boot.img, 1 = recovery.img */
+    char build[128];   /* Build number */
+
+    unsigned int orig_kernel_size;
+    unsigned int orig_ramdisk_size;
+    unsigned int ramdisk_addr;
+};
 
 #if 0
 typedef struct ptentry ptentry;
